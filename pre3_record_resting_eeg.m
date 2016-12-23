@@ -7,7 +7,8 @@ function s = pre3_record_resting_eeg161220(plotHandle, ch_eeg)
 
 % ========= Setup the hardware channels =================
 s = daq.createSession('ni');
-dev = 'Dev1';
+usrdata = get(plotHandle,'UserData');
+dev = usrdata.daq_dev; % e.g.'Dev1'
 
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
 s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
@@ -20,12 +21,10 @@ s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 t_plot = 5; % sec
 t_force_quit = 120;% sec
 range_freqs = [4,20]; % Hz to plot power spectrum
-freq_oi = 10; % Hz to plot power time sequence
+freq_oi = usrdata.freq_oi; % Hz to plot power time sequence
 n_ch = length(s.Channels); % only eeg = length(s.Channels)
 tBufferRing = 1.0; % sec
 % ======== retrieve settings for recordings ============================
-usrdata = get(plotHandle,'UserData');
-usrdata.freq_oi = freq_oi;
 usrdata.tBufferRing = tBufferRing;
 ch_info = usrdata.ch_info;
 for ii = 1: n_ch

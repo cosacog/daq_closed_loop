@@ -16,7 +16,8 @@ function s = pre1_record_calibration161220(plotHandle, ch_cal_rec)
 % ======= EDIT CONFIGURATION FOR YOUR HW===================================
 % Setup the hardware channels
 s = daq.createSession('ni');
-dev = 'Dev1';
+usrdata = get(plotHandle,'UserData');
+dev = usrdata.daq_dev; % e.g. 'Dev1' or 'Dev2'
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
 s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
 s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
@@ -33,7 +34,6 @@ t_plot = 5; % sec
 t_force_quit = 60;% sec
 
 % ======== retrieve settings for recordings ============================
-usrdata = get(plotHandle,'UserData');
 usrdata.n_ch = length(s.Channels);
 n_ch = usrdata.n_ch;
 % recordings
@@ -75,7 +75,7 @@ for jj = 1:n_ch
         usrdata.ch_info(jj).done_rec_cal = true;
         usrdata.ch_info(jj).done_cal = false;
         clrs_ylab{jj} = 'red';
-    else
+    elseif isempty(usrdata.ch_info(jj).done_rec_cal)
         usrdata.ch_info(jj).done_rec_cal = false;
     end
     usrdata.ch_info(jj).volt_range_daq = ylims_raw(jj,:);

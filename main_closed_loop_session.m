@@ -6,19 +6,20 @@ function s = main_closed_loop_session(plotHandle)
 %======== EDIT CONFIGURATION FOR YOUR HW===================================
 % Setup the hardware channels
 s = daq.createSession('ni');
-dev = 'Dev1';
+usrdata = get(plotHandle,'UserData');
+dev = usrdata.daq_dev; % e.g. 'Dev1'
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
 s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
 s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
 s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 % s.addDigitalChannel('cDAQ1Mod4','port0/line0','InputOnly'); 
 %======= Prepare for TMS pulse ============================
-addpath('c:\toolbox\io32'); % include io32.dll
-ioObj = io32;
-status = io32(ioObj);
-data_out = 255;
-data_out0 = 0;
-address = hex2dec('CFF8');
+% addpath('c:\toolbox\io32'); % include io32.dll
+% ioObj = io32;
+% status = io32(ioObj);
+% data_out = 255;
+% data_out0 = 0;
+% address = hex2dec('CFF8');
 
 % sample to put out TMS pulse
 %io32(ioObj, address, data_out);% trigger on
@@ -31,7 +32,6 @@ t_interval = 5.0; % time interval for next epoch
 t_range_mep = [18, 45]; % ms, time range to detect MEP peaks
 n_epochs_to_save = 20; % epochs number to save
 % ========================================================
-usrdata = get(plotHandle,'UserData');
 usrdata.savedata = [];
 
 %% EDIT THESE PARAMETERS FOR YOUR CUSTOM ACQUISITION========================
@@ -61,7 +61,7 @@ catch
 end
 
 % initialize
-idx_epochs = 0; % 取り込んだ�??タの数
+idx_epochs = 0; % 取り込んだepochの数
 time_stamp = 0; % time stamp to check the interval
 pow_ts = [];len_pow = 0;
 % thr_pow = 4;
@@ -121,6 +121,15 @@ ax_mep = plot(nan, nan, nan, nan,nan,nan,'r*');
 al_trig = line([nan, nan],[-10000,10000],'color','g');
 set(axe_mep, 'YLim',ylim_mep, 'YLimMode','manual')
 title('MEP wave')
+
+% mep amplitudes plot
+subplot(4,2,6)
+axe_amp = gca;
+ax_amp = plot(nan, nan, 'r*',nan,nan,'b*')
+set(axe_amp, 'Xlim',[0,1], 'XLimMode','manual')
+title('MEP amplitudes, Hi:Red, Lo:Blue')
+idx_amp_hi_x = []; mep_amp_hi_y = []; % high condition
+idx_amp_lo_x = []; mep_amp_lo_y = []; % low condition
 
 % power plot
 subplot(4,2,7);
@@ -218,6 +227,14 @@ s.startBackground();
             usrdata.bufferTrig = bufferTrig;
             usrdata.savedata(idx_epochs).amp_mep = amp_mep;
             set(plotHandle,'UserData',usrdata);
+            if strcmp(usrdata.savedata(idx_epochs).hilo,'hi')
+                idx_amp_hi_x = [idx_amp_hi_x, idx_epochs];
+                mep_amp_hi_y = [mep_amp_hi_y, amp_mep];
+            else
+                idx_amp_lo_x = [idx_amp_lo_x, idx_epochs];
+                mep_amp_lo_y = [mep_amp_lo_y, amp_mep];
+            end
+            
 
             % plot raw MEP data
             subplot(4,2,5)
@@ -226,7 +243,13 @@ s.startBackground();
             set(ax_mep(3), 'XData', t_min_max_mep, 'YData', amp_min_max_mep)
             set(al_trig, 'XData', [timesMep(idx_thr), timesMep(idx_thr)])
             xlim(timesMep([1,end]))
-            
+
+            % plot MEP amplitudes data
+            subplot(4,2,6)
+            set(ax_amp(1), 'XData',idx_amp_hi_x,'YData',mep_amp_hi_y); % high
+            set(ax_amp(2), 'XData',idx_amp_lo_x,'YData',mep_amp_lo_y); % low
+            set(axe_amp, 'XLim',[0, idx_epochs+1])
+
             isDataMepLogged = false;
             % stop after get enough data
             if idx_epochs >= n_epochs_to_save
@@ -247,7 +270,7 @@ s.startBackground();
             % trigInd = find(trig, 1, 'first');
             isMyDataLogged = true;
             idx_epochs = length(usrdata.savedata) + 1;
-            % condHiLo = hilo(is_exceeds_lo_thr + 1);
+            % cond = hilo(is_exceeds_lo_thr + 1);
             usrdata.savedata(idx_epochs).hilo = hilo(is_exceeds_lo_thr + 1);
             usrdata.savedata(idx_epochs).pow_oi = pow_bufRingMon(idx_pow_oi);
             % disp(pow_bufRingMon(idx_pow_oi));
@@ -257,9 +280,9 @@ s.startBackground();
         % Actions for when the trigger condition is met
         if isMyDataLogged
             % ============== put out TMS pulse =======================
-            io32(ioObj, address, data_out)% trigger on
-            pause(0.01)
-            io32(ioObj, address, data_out0) % trigger off
+            % io32(ioObj, address, data_out)% trigger on
+            % pause(0.01)
+            % io32(ioObj, address, data_out0) % trigger off
             % ============== end of TMS pulse ========================
 
             % plot epoch data
