@@ -7,26 +7,30 @@ function s = pre3_record_resting_eeg161220(plotHandle, ch_eeg)
 
 % ========= Setup the hardware channels =================
 s = daq.createSession('ni');
-dev = 'Dev2';
-ch_ai = sprintf('ai%d',ch_eeg-1);
+dev = 'Dev1';
+
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
-s.addAnalogInputChannel(dev,ch_ai,'Voltage'); % eeg
-% s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
-% s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
+s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
+s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
+s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 % s.addDigitalChannel('cDAQ1Mod4','port0/line0','InputOnly'); 
 % s.Channels.TerminalConfig = 'SingleEnded'
+
 % ===================== settings ========================
 t_plot = 5; % sec
 t_force_quit = 120;% sec
 range_freqs = [4,20]; % Hz to plot power spectrum
 freq_oi = 10; % Hz to plot power time sequence
-n_ch = 1; % only eeg = length(s.Channels)
+n_ch = length(s.Channels); % only eeg = length(s.Channels)
 tBufferRing = 1.0; % sec
 % ======== retrieve settings for recordings ============================
 usrdata = get(plotHandle,'UserData');
 usrdata.freq_oi = freq_oi;
 usrdata.tBufferRing = tBufferRing;
 ch_info = usrdata.ch_info;
+for ii = 1: n_ch
+    s.Channels(ii).Range = ch_info(ii).volt_range_daq;
+end
 % n_ch = usrdata.n_ch;
 % ==================== setup ==============================================
 s_rate = usrdata.s_rate; % 1000 (Hz)
@@ -59,16 +63,23 @@ pows_eeg = []; len_pows = 0; % power data of time sequence
 len_pow_view = 10; % points to view
 title_pow_ts = sprintf('Power of %d Hz',freq_oi);
 % ==================== coefficences to convert into real data ============================
-ratios_io = [];
+ratios_io = zeros(1,n_ch);
 ratios_io_buf = zeros(pSizeBuffer, n_ch);
-bls = [];
+bls = zeros(1,n_ch);
 bls_buf = zeros(pSizeBuffer, n_ch);
 for ii = 1:n_ch
-    ratios_io(ii) = ch_info(ii).ratio_cal;
+    try
+        ratios_io(ii) = ch_info(ii).ratio_cal;
+        bls(ii) = ch_info(ii).baseline * ratios_io(ii);
+    catch
+        ratios_io(ii) = 1;
+        bls(ii) = 0;
+    end
     ratios_io_buf(:,ii) = zeros(pSizeBuffer,1) + ratios_io(ii);
-    bls(ii) = ch_info(ii).baseline * ratios_io(ii);
     bls_buf(:,ii) = zeros(pSizeBuffer, 1) + bls(ii);
 end
+disp(ratios_io_buf(1:3,:))
+disp(bls_buf(1:3,:))
 % ================ Apply the settings to the hardware ===================
 s.Rate = s_rate;
 s.IsContinuous = 1;
@@ -80,7 +91,9 @@ s.startBackground();
     function refillBuffers(src,event) %#ok
         % Get the current data
         newData = event.Data;
+%         disp(newData(1:3,:));
         newData_io = newData.*ratios_io_buf - bls_buf;
+%         disp(newData_io(1:3,:));
         ai0time = event.TimeStamps;
 
         % reset buffer when started
@@ -116,13 +129,13 @@ s.startBackground();
         w_buffer = bufferDataStore(idx_t_init:end,:);
         xlim_raw = [t_buffer(end)-t_plot, t_buffer(end)];
         figure(plotHandle)
-        for ii = 1:(n_ch)
+%         for ii = 1:(n_ch)
             subplot(2,3,[1:3])
-            plot(t_buffer, w_buffer(:,ii));
+            plot(t_buffer, w_buffer(:,ch_eeg));
             xlim(xlim_raw);ylim(ylim_raw)
             title('online data')
             ylabel(chnames);
-        end
+%         end
 
         % plot power spectrum (alpha ~ beta range)
         % % calc power

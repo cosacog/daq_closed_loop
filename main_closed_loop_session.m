@@ -1,33 +1,33 @@
-function s = main_closed_loop_session161219(plotHandle)
+function s = main_closed_loop_session(plotHandle)
 % record eeg data and put out TMS pulse, then record meps
-% Usage: s = main_closed_loop_session161219(plogHandle)
+% Usage: s = main_closed_loop_session(plogHandle)
 % params: plotHandle. needs to run pre* before this script
 
 %======== EDIT CONFIGURATION FOR YOUR HW===================================
 % Setup the hardware channels
 s = daq.createSession('ni');
-dev = 'Dev2';
+dev = 'Dev1';
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
 s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
 s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
 s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 % s.addDigitalChannel('cDAQ1Mod4','port0/line0','InputOnly'); 
 %======= Prepare for TMS pulse ============================
-% addpath('c:\toolbox\io32'); % include io32.dll
-% ioObj = io32;
-% status = io32(ioObj);
-% data_out = 255;
-% data_out0 = 0;
-% address = hex2dec('CFF8');
-% 
-% % sample to put out TMS pulse
-% %io32(ioObj, address, data_out);% trigger on
-% %pause(0.01); % 10 ms
-% %io32(ioObj, address, data_out0); % trigger off
+addpath('c:\toolbox\io32'); % include io32.dll
+ioObj = io32;
+status = io32(ioObj);
+data_out = 255;
+data_out0 = 0;
+address = hex2dec('CFF8');
+
+% sample to put out TMS pulse
+%io32(ioObj, address, data_out);% trigger on
+%pause(0.01); % 10 ms
+%io32(ioObj, address, data_out0); % trigger off
 
 % ================= settings ==========================
 % tBufferRing = 1.0 % 
-t_interval = 3.0; % time interval for next epoch
+t_interval = 5.0; % time interval for next epoch
 t_range_mep = [18, 45]; % ms, time range to detect MEP peaks
 n_epochs_to_save = 20; % epochs number to save
 % ========================================================
@@ -49,6 +49,9 @@ ch_info = plotHandle.UserData.ch_info;
 ch_monitor = 1; % channel for monitor and fft
 ch_mep = 2; % channel for mep recording
 ch_trig = 3; % trigger channel
+for ii = 1: n_ch
+    s.Channels(ii).Range = ch_info(ii).volt_range_daq;
+end
 hilo = {'hi','lo'}; % store in savedata
 % =================== power threshold ====================================
 try
@@ -58,7 +61,7 @@ catch
 end
 
 % initialize
-idx_epochs = 0; % 取り込んだデータの数
+idx_epochs = 0; % 取り込んだ�??タの数
 time_stamp = 0; % time stamp to check the interval
 pow_ts = [];len_pow = 0;
 % thr_pow = 4;
@@ -75,12 +78,12 @@ bufferRingTime = zeros(pSizeBufferRing, 1);
 
 % set power frequencies and its index
 freqs_pow = [0:pSizeBufferRing/s_rate:s_rate/2]; % cycle
-idx_pow_oi = find(freqs_pow >= freq_oi,1) % 11 
+idx_pow_oi = find(freqs_pow >= freq_oi,1); % 11 
 
 % retrieve plot parameters
 ylim_monitor = ch_info(ch_monitor).range_view;
 ylim_mep = ch_info(ch_mep).range_view;
-timesMep = [1:1000/s_rate:tSegBuffer*1000];
+timesMep = 1:1000/s_rate:tSegBuffer*1000;
 idx_range_mep = find(timesMep >= t_range_mep(1) & timesMep <= t_range_mep(2));
 clrs_title_eeg_power = {'r','k'};
 % ==================== coefficences to convert into real data ============================
@@ -114,8 +117,8 @@ al_epo = line(nan, nan);
 % mep raw plot
 subplot(4,2,5)
 axe_mep = gca;
-ax_mep = plot(nan, nan, nan, nan,'r*');
-al_trig = line([nan, nan],[-10000,10000],'color','g')
+ax_mep = plot(nan, nan, nan, nan,nan,nan,'r*');
+al_trig = line([nan, nan],[-10000,10000],'color','g');
 set(axe_mep, 'YLim',ylim_mep, 'YLimMode','manual')
 title('MEP wave')
 
@@ -200,12 +203,12 @@ s.startBackground();
             bufferTrig = newData_io(:,ch_trig);
 
             % detect trigger and calc amplitudes
-            bufferTrigBin = [bufferTrig > (max(bufferTrig) + median(bufferTrig))/2];
+            bufferTrigBin = bufferTrig > (max(bufferTrig) + median(bufferTrig))/2;
             idx_thr = find(bufferTrigBin,1);
             idx_range_mep_plus_thr = idx_thr + idx_range_mep;
             bufferSegMep = bufferMep(idx_range_mep_plus_thr);
             idx_min_max_mep = [find(bufferSegMep==min(bufferSegMep),1),...
-                               find(bufferSegMep==max(bufferSegMep),1)]+idx_range_mep_plus_thr(1);
+                               find(bufferSegMep==max(bufferSegMep),1)]+idx_range_mep_plus_thr(1)-1;
             bufferMep_bcr = bufferMep - mean(bufferMep(1:idx_thr));
             amp_min_max_mep = bufferMep_bcr(idx_min_max_mep);
             amp_mep = range(amp_min_max_mep);
@@ -219,7 +222,8 @@ s.startBackground();
             % plot raw MEP data
             subplot(4,2,5)
             set(ax_mep(1), 'XData', timesMep, 'YData', bufferMep_bcr)
-            set(ax_mep(2), 'XData', t_min_max_mep, 'YData', amp_min_max_mep)
+            set(ax_mep(2), 'XData', timesMep, 'YData', bufferTrig*100)
+            set(ax_mep(3), 'XData', t_min_max_mep, 'YData', amp_min_max_mep)
             set(al_trig, 'XData', [timesMep(idx_thr), timesMep(idx_thr)])
             xlim(timesMep([1,end]))
             
@@ -230,9 +234,8 @@ s.startBackground();
                 s.stop();
                 s.release();
                 delete(lh);
-                disp(ai0time)
+                disp('done')
             end
-
         end
 
         % Check if the trigger condition is met
@@ -254,9 +257,9 @@ s.startBackground();
         % Actions for when the trigger condition is met
         if isMyDataLogged
             % ============== put out TMS pulse =======================
-            % io32(ioObj, address, data_out)% trigger on
-            % pause(0.01)
-            % io32(ioObj, address, data_out0) % trigger off
+            io32(ioObj, address, data_out)% trigger on
+            pause(0.01)
+            io32(ioObj, address, data_out0) % trigger off
             % ============== end of TMS pulse ========================
 
             % plot epoch data

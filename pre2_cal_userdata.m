@@ -23,7 +23,7 @@ try
     times_seg = times(idxs);
     rawdata_seg = rawdataCal(idxs,:);
     for ii = 1:n_ch
-        if ~ch_info(ii).done_cal
+        if ~ch_info(ii).done_cal && ch_info(ii).done_rec_cal
             rawdata_seg_ch = rawdata_seg(:,ii);
             min_data = prctile(rawdata_seg_ch, prctiles(1));
             max_data = prctile(rawdata_seg_ch, prctiles(2));
@@ -42,4 +42,5 @@ catch
     disp(plotHandle.UserData.ch_info)
     error('Parameters in plotHandle.UserData are not set correctly')
 end
+disp(plotHandle.UserData.ch_info)
 end

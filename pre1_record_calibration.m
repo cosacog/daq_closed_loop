@@ -1,33 +1,34 @@
-function s = pre1_record_calibration161220(plotHandle, cal_settings)
+function s = pre1_record_calibration161220(plotHandle, ch_cal_rec)
 % set calibration for the channels
-% Usage: s = pre1_record_calibration161220(plogHandle, cal_settings)
+% Usage: s = pre1_record_calibration161220(plogHandle, ch_cal_rec)
 % params:
 %   plotHandle
-%   cal_settings: struct including (1) idx:channel index
-%                                  (2) cal: range of min max. e.g.[-100 100]
-%                                  (3) unit: e.g. 'microV', 'V'
-%                refer to append_cal_settings
-% =============== sample code ====================
-% 
-% ph1=figure(1)
-% set_chnames(ph1, {'eeg','mep','trig'})
-% cal_settings = [];
-% cal_settings = append_cal_settings([],{1,[-1000 1000],'microV'})
-% s=pre1_record_calibration161220(ph1, cal_settings);
-% 
-% c.f. after this, go to cal_userdata
+%   ch_cal_rec: channel to record calibration wave
+% % =============== sample code ====================
+% % ph1=figure(1)
+% % set_chnames(ph1, {'eeg','mep','trig'})
+% % cal_settings = [];
+% % cal_settings = append_cal_settings([],{1,[-1000 1000],'microV'})
+% % s=pre1_record_calibration161220(ph1, 1);
+% % 
+% % c.f. after this, go to cal_userdata
 
 % ======= EDIT CONFIGURATION FOR YOUR HW===================================
 % Setup the hardware channels
 s = daq.createSession('ni');
+dev = 'Dev1';
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
-s.addAnalogInputChannel('Dev2','ai0','Voltage'); % eeg
-s.addAnalogInputChannel('Dev2','ai1','Voltage'); % mep
-s.addAnalogInputChannel('Dev2','ai2','Voltage'); % TMS pulse
+s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
+s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
+s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 % s.addDigitalChannel('cDAQ1Mod4','port0/line0','InputOnly'); 
 % s.Channels.TerminalConfig = 'SingleEnded'
+
 % ===================== settings ========================
-ylim_raw = [-20 20];
+ylims_raw = [-10 10; -5 5; -10 10];
+s.Channels(1).Range = ylims_raw(1,:);
+s.Channels(2).Range = ylims_raw(2,:);
+s.Channels(3).Range = ylims_raw(3,:);
 t_plot = 5; % sec
 t_force_quit = 60;% sec
 
@@ -42,10 +43,7 @@ if ~isfield(usrdata,'s_rate')
 end
 % plot channels
 if ~isfield(usrdata,'ch_info')
-    warning('plotHandle does not have element "ch_info". Create channel names')
-    for ii = 1:n_ch
-        usrdata.ch_info(ii).chname = s.Channels(ii).ID;
-    end
+    error('plotHandle does not have element "ch_info". Refer to set_chnames, set_cal_settings.')
 end
 % ==================== setup ==============================================
 s_rate = usrdata.s_rate;
@@ -69,15 +67,18 @@ if n_ch>1
 end
 
 chnames = {};
-for ii = 1:n_ch;chnames{ii} = usrdata.ch_info(ii).chname;end
+for jj = 1:n_ch;chnames{jj} = usrdata.ch_info(jj).chname;end
 % ==================== check channel indices ============================
 clrs_ylab = repmat({'black'},1, n_ch);
-for ii = 1:length(cal_settings)
-    idx_ch = cal_settings(ii).idx;
-    clrs_ylab{idx_ch}='red';
-    usrdata.ch_info(idx_ch).cal_range = cal_settings(ii).cal;
-    usrdata.ch_info(idx_ch).unit = cal_settings(ii).unit;
-    usrdata.ch_info(idx_ch).done_cal = false;
+for jj = 1:n_ch
+    if any(ch_cal_rec == jj)
+        usrdata.ch_info(jj).done_rec_cal = true;
+        usrdata.ch_info(jj).done_cal = false;
+        clrs_ylab{jj} = 'red';
+    else
+        usrdata.ch_info(jj).done_rec_cal = false;
+    end
+    usrdata.ch_info(jj).volt_range_daq = ylims_raw(jj,:);
 end
 % ================ Apply the settings to the hardware ===================
 s.Rate = s_rate;
@@ -124,7 +125,7 @@ s.startBackground();
         for ii = 1:(n_ch)
             subplot('Position', pos_subplot(ii).pos)
             plot(t_buffer, w_buffer(:,ii));
-            xlim(xlim_raw);ylim(ylim_raw)
+            xlim(xlim_raw);ylim(ylims_raw(ii,:))
             set(gca,'xcol',clrs_x{ii});
             title(titles{ii})
             ylabel(chnames{ii}, 'color',clrs_ylab{ii})
