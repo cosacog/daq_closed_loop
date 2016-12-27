@@ -13,7 +13,7 @@ function s = pre1_record_calibration161220(plotHandle, ch_cal_rec)
 % % 
 % % c.f. after this, go to cal_userdata
 
-% ======= EDIT CONFIGURATION FOR YOUR HW===================================
+% ======= EDIT CONFIGURATION FOR YOUR HW=================================
 % Setup the hardware channels
 s = daq.createSession('ni');
 usrdata = get(plotHandle,'UserData');
@@ -30,7 +30,7 @@ ylims_raw = [-10 10; -5 5; -10 10];
 s.Channels(1).Range = ylims_raw(1,:);
 s.Channels(2).Range = ylims_raw(2,:);
 s.Channels(3).Range = ylims_raw(3,:);
-t_plot = 5; % sec
+t_plot = 10; % sec
 t_force_quit = 60;% sec
 
 % ======== retrieve settings for recordings ============================
@@ -45,6 +45,7 @@ end
 if ~isfield(usrdata,'ch_info')
     error('plotHandle does not have element "ch_info". Refer to set_chnames, set_cal_settings.')
 end
+
 % ==================== setup ==============================================
 s_rate = usrdata.s_rate;
 tSegBuffer = usrdata.tSegBuffer;
@@ -100,11 +101,14 @@ s.startBackground();
             time_stamp = ai0time(end);
         end
 
-        % Refill the buffer and throw out data beyond pretrigger time (FIFO)
+        % Refill the buffer
         bufferDataStore = cat(1, bufferDataStore, newData);
         bufferTimeStore = cat(1, bufferTimeStore, ai0time);
-        usrdata.rawdataCal = bufferDataStore;
-        usrdata.rawdataTimeCal = bufferTimeStore;
+        for kk = ch_cal_rec
+            usrdata.ch_info(kk).rawdataCal = bufferDataStore(:,kk);
+            % usrdata.rawdataCal = bufferDataStore;
+            usrdata.rawdataTimeCal = bufferTimeStore;
+        end
         set(plotHandle, 'UserData',usrdata);
 
         % force quit unknown error
@@ -122,7 +126,7 @@ s.startBackground();
         w_buffer = bufferDataStore(idx_t_init:end,:);
         xlim_raw = [t_buffer(end)-t_plot, t_buffer(end)];
         figure(plotHandle)
-        for ii = 1:(n_ch)
+        for ii = 1:n_ch
             subplot('Position', pos_subplot(ii).pos)
             plot(t_buffer, w_buffer(:,ii));
             xlim(xlim_raw);ylim(ylims_raw(ii,:))

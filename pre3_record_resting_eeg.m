@@ -79,20 +79,36 @@ for ii = 1:n_ch
 end
 disp(ratios_io_buf(1:3,:))
 disp(bls_buf(1:3,:))
+% ================ plot init ============================================
+clf(plotHandle)
+
+subplot(2,3,[1:3])
+axe_raw = gca;
+ap_raw = plot(nan, nan);
+set(axe_raw, 'YLim', ylim_raw,'YLimMode','manual')
+title('online data')
+ylabel(chnames);
+
+pows_eeg_range=[];
+subplot(2,3,4)
+axe_psp = gca;
+ah_psp = line(nan, nan);
+ap_psp = line(nan, nan,'color','r','linewidth',2);
+set(axe_psp,'YLim',[0, 2.5],'YLimMode','manual','XLim',xlim_freqs,'XLimMode','manual')
+xlabel('Hz')
+title('FFT (theta-beta)')
+
 % ================ Apply the settings to the hardware ===================
 s.Rate = s_rate;
 s.IsContinuous = 1;
 s.NotifyWhenDataAvailableExceeds = pSizeBuffer; % runs every 100 samples (= pSizeBuffer)
 lh = s.addlistener('DataAvailable',@refillBuffers); % function to call
-clf(plotHandle)
 s.startBackground();
 %================= Listener function ================================
     function refillBuffers(src,event) %#ok
         % Get the current data
         newData = event.Data;
-%         disp(newData(1:3,:));
         newData_io = newData.*ratios_io_buf - bls_buf;
-%         disp(newData_io(1:3,:));
         ai0time = event.TimeStamps;
 
         % reset buffer when started
@@ -127,14 +143,10 @@ s.startBackground();
         t_buffer = bufferTimeStore(idx_t_init:end);
         w_buffer = bufferDataStore(idx_t_init:end,:);
         xlim_raw = [t_buffer(end)-t_plot, t_buffer(end)];
-        figure(plotHandle)
-%         for ii = 1:(n_ch)
-            subplot(2,3,[1:3])
-            plot(t_buffer, w_buffer(:,ch_eeg));
-            xlim(xlim_raw);ylim(ylim_raw)
-            title('online data')
-            ylabel(chnames);
-%         end
+        % figure(plotHandle)
+        subplot(2,3,[1:3])
+        set(ap_raw, 'XData', t_buffer, 'YData', w_buffer(:,ch_eeg))
+        xlim(xlim_raw);ylim(ylim_raw)
 
         % plot power spectrum (alpha ~ beta range)
         % % calc power
@@ -142,12 +154,13 @@ s.startBackground();
             linspace(mean(buffersRing(1:10,ch_eeg)),mean(buffersRing(end-10:end,ch_eeg)), pSizeBufferRing)';
         pow_eeg = abs(fft(rawdata_ring_detrend))*coef_pow_correct;
         pow_eeg_range = pow_eeg(idx_freqs_ring_buf);
+        pows_eeg_range = cat(2,pows_eeg_range, pow_eeg_range);
+        pow_mean_eeg_range = mean(pows_eeg_range,2);
+
         % % plot
         subplot(2,3,4)
-        plot(freqs_ring_buf_range, pow_eeg_range);
-        xlim(xlim_freqs);ylim([0, 2.5])
-        title('FFT (theta-beta)')
-        xlabel('Hz')
+        set(ah_psp, 'XData', freqs_ring_buf_range, 'YData', pow_eeg_range);
+        set(ap_psp,'XData',freqs_ring_buf_range, 'YData',pow_mean_eeg_range);
 
         % plot time sequence of power of interest
         pow_eeg_freq_oi = pow_eeg(idx_freq_oi);

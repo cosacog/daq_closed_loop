@@ -14,12 +14,12 @@ s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
 s.addAnalogInputChannel(dev,'ai2','Voltage'); % TMS pulse
 % s.addDigitalChannel('cDAQ1Mod4','port0/line0','InputOnly'); 
 %======= Prepare for TMS pulse ============================
-% addpath('c:\toolbox\io32'); % include io32.dll
-% ioObj = io32;
-% status = io32(ioObj);
-% data_out = 255;
-% data_out0 = 0;
-% address = hex2dec('CFF8');
+addpath('c:\toolbox\io32'); % include io32.dll
+ioObj = io32;
+status = io32(ioObj);
+data_out = 255;
+data_out0 = 0;
+address = hex2dec('CFF8');
 
 % sample to put out TMS pulse
 %io32(ioObj, address, data_out);% trigger on
@@ -175,7 +175,7 @@ s.startBackground();
         bufferRingTime = cat(1, bufferRingTime(pSizeBuffer+1:end,:), ai0time);
 
         % quit when long time
-        if (ai0time(1) - time_stamp > 200.0)
+        if ai0time(1) > 150.0
             s.stop();
             s.release();
             delete(lh);
@@ -280,9 +280,9 @@ s.startBackground();
         % Actions for when the trigger condition is met
         if isMyDataLogged
             % ============== put out TMS pulse =======================
-            % io32(ioObj, address, data_out)% trigger on
-            % pause(0.01)
-            % io32(ioObj, address, data_out0) % trigger off
+            io32(ioObj, address, data_out)% trigger on
+            pause(0.01)
+            io32(ioObj, address, data_out0) % trigger off
             % ============== end of TMS pulse ========================
 
             % plot epoch data

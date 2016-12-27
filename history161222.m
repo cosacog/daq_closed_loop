@@ -1,35 +1,49 @@
 % setup
+ch_eeg=1; ch_mep=2; ch_trig=3;
 ph1=figure(1)
 set_daq_device(ph1, 'Dev2')
-set_chnames(ph1,{'eeg','meg','trig'})
-cal_settings = append_cal_settings([], {1,[-100 100],'microV'})
-cal_settings = append_cal_settings(cal_settings, {2,[-1000 1000],'microV'})
-cal_settings = append_cal_settings(cal_settings, {3,[0 5000],'microV'})
+set_chnames(ph1,{'eeg','mep','trig'})
+cal_settings = append_cal_settings([], {ch_eeg,[-100 100],'microV'});
+cal_settings = append_cal_settings(cal_settings, {ch_mep,[-1000 1000],'microV'});
+cal_settings = append_cal_settings(cal_settings, {ch_trig,[0 5000],'microV'});
 set_cal_settings(ph1, cal_settings)
-s=pre1_record_calibration(ph1, 1)
-pause(5)
-s.stop()
-s.release()
-s=pre1_record_calibration(ph1, 2)
-pause(5)
-s.stop()
-s.release()
-pre2_cal_userdata(ph1, 5)
-set_manual_cal_da(ph1,3,1,0)
-set_ch_view_range(ph1,1,[-200 200])
-set_ch_view_range(ph1,2,[-2000 2000])
-set_ch_view_range(ph1,3,[0 5])
+
+% set view range
+set_ch_view_range(ph1,ch_eeg,[-200 200])
+set_ch_view_range(ph1,ch_mep,[-2000 2000])
+set_ch_view_range(ph1,ch_trig,[0 5])
+
+% cal signal record
+s=pre1_record_calibration(ph1, ch_eeg)
+pause(10)
+s.stop()s.release()
+s=pre1_record_calibration(ph1, ch_mep)
+pause(10)
+s.stop()s.release()
+
+% cal set
+t_cal_set = 10; % sec. time for setting calibration
+pre2_cal_userdata(ph1, t_cal_set)
+set_manual_cal_da(ph1,ch_trig,1,0)
 
 % monitor subject eeg
 set_freq4monitor(ph1, 10) % 10 hz for monitor
-s=pre3_record_resting_eeg(ph1, 1)
-s.stop()
-s.release()
+s=pre3_record_resting_eeg(ph1, ch_eeg)
+s.stop();s.release()
 prctile(ph1.UserData.pows_eeg,10)
 prctile(ph1.UserData.pows_eeg,90)
-set_pow_threshold(ph1, [0.18, 1.0])
+% set_pow_threshold(ph1, [0.55, 2.98])
+set_pow_threshold(ph1, [0.85, 4.0])
 
 % main
 s=main_closed_loop_session(ph1)
-s.stop()
-s.release()
+s.stop();s.release()
+
+%save
+dt_str = datestr(datetime,'yymmddHHMM');
+fig_name_out = sprintf('fig_%s.fig', dt_str);
+mat_name_out = sprintf('dat_%s.mat', dt_str);
+savefig(ph1, fig_name_out);
+usrdata = ph1.UserData;
+save(mat_name_out, 'usrdata');
+
