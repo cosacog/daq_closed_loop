@@ -16,24 +16,35 @@ set_ch_view_range(ph1,ch_trig,[0 5])
 % cal signal record
 s=pre1_record_calibration(ph1, ch_eeg)
 pause(10)
-s.stop()s.release()
+s.stop();s.release();
+% cal signal record: change cal signal range
 s=pre1_record_calibration(ph1, ch_mep)
 pause(10)
-s.stop()s.release()
+s.stop();s.release();
 
 % cal set
 t_cal_set = 10; % sec. time for setting calibration
 pre2_cal_userdata(ph1, t_cal_set)
 set_manual_cal_da(ph1,ch_trig,1,0)
 
+% check cal waveform
+s=pre3_view_cal_signal(ph1)
+s.stop();s.release();
+
 % monitor subject eeg
 set_freq4monitor(ph1, 10) % 10 hz for monitor
-s=pre3_record_resting_eeg(ph1, ch_eeg)
+set_pow_range(ph1, [0, 1.25])
+s =pre4_record_resting_eeg(ph1, ch_eeg)
 s.stop();s.release()
+
+% plot power time series
+subplot(2,3,[1:3]);plot(ph1.UserData.pows_eeg_rest);title('power time series')
+
+% check power value percentile
 prctile(ph1.UserData.pows_eeg,10)
 prctile(ph1.UserData.pows_eeg,90)
 % set_pow_threshold(ph1, [0.55, 2.98])
-set_pow_threshold(ph1, [0.85, 4.0])
+set_pow_threshold(ph1, [2.8, 3.3])
 
 % main
 s=main_closed_loop_session(ph1)

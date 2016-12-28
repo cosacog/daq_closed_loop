@@ -9,7 +9,6 @@ function s = pre3_record_resting_eeg161220(plotHandle, ch_eeg)
 s = daq.createSession('ni');
 usrdata = get(plotHandle,'UserData');
 dev = usrdata.daq_dev; % e.g.'Dev1'
-
 % s.addAnalogInputChannel('cDAQ1Mod2','ai6','Voltage'); 
 s.addAnalogInputChannel(dev,'ai0','Voltage'); % eeg
 s.addAnalogInputChannel(dev,'ai1','Voltage'); % mep
@@ -77,8 +76,8 @@ for ii = 1:n_ch
     ratios_io_buf(:,ii) = zeros(pSizeBuffer,1) + ratios_io(ii);
     bls_buf(:,ii) = zeros(pSizeBuffer, 1) + bls(ii);
 end
-disp(ratios_io_buf(1:3,:))
-disp(bls_buf(1:3,:))
+% disp(ratios_io_buf(1:3,:))
+% disp(bls_buf(1:3,:))
 % ================ plot init ============================================
 clf(plotHandle)
 
@@ -90,13 +89,23 @@ title('online data')
 ylabel(chnames);
 
 pows_eeg_range=[];
+pow_view_range = [0, 2.5];
+if isfield(usrdata, 'pow_range')
+    pow_view_range = usrdata.pow_range;
+end
 subplot(2,3,4)
 axe_psp = gca;
 ah_psp = line(nan, nan);
 ap_psp = line(nan, nan,'color','r','linewidth',2);
-set(axe_psp,'YLim',[0, 2.5],'YLimMode','manual','XLim',xlim_freqs,'XLimMode','manual')
+set(axe_psp,'YLim',pow_view_range,'YLimMode','manual','XLim',xlim_freqs,'XLimMode','manual')
 xlabel('Hz')
 title('FFT (theta-beta)')
+
+subplot(2,3,5)
+axe_pts = gca;
+ah_pts = line(nan,nan);
+set(axe_pts, 'YLim',pow_view_range, 'YLimMode','manual')
+title(title_pow_ts);
 
 % ================ Apply the settings to the hardware ===================
 s.Rate = s_rate;
@@ -129,15 +138,18 @@ s.startBackground();
 
         % quit after recording enough time
         if ai0time(end) > t_force_quit
-            s.stop();
-            s.release();
-            delete(lh);
+            s.stop();s.release();delete(lh);
             disp('quit')
-            usrdata.pows_eeg_cal = pows_eeg;
+            usrdata.pows_eeg_rest = pows_eeg;
             set(plotHandle,'UserData',usrdata);
-            figure;plot(pows_eeg);title('power time series')
+            % ph = figure(plotHandle+1)
+            % plot(pows_eeg)
+            % subplot(2,3,5)
+            % set(ah_pts, 'XData',[1:length(pows_eeg)],'YData', pows_eeg)
+            % xlim([1,200])
+            % set(axe_pts, 'XLim',[1, 200])
         end
-                
+
         % plot online eeg data
         idx_t_init = max([length(bufferTimeStore)-p_plot ,1]);
         t_buffer = bufferTimeStore(idx_t_init:end);
@@ -169,8 +181,11 @@ s.startBackground();
         len_pows = len_pows+1;
         xlim_pow_ts = [len_pows - len_pow_view, len_pows];
         subplot(2,3,5)
-        plot(pows_eeg);xlim(xlim_pow_ts);ylim([0, 2.5])
-        title(title_pow_ts);
+        set(ah_pts, 'XData',[1:length(pows_eeg)],'YData', pows_eeg)
+        % plot(pows_eeg);
+        xlim(xlim_pow_ts);
+        % ylim(pow_view_range)
+        % title(title_pow_ts);
 
         % plot histogram of power of interest
         subplot(2,3,6)

@@ -8,7 +8,7 @@ function str = sub_calc_compact_subplot_position(nv)
     max_h = 0.95;
     min_h = 0.1;
     arry_v = linspace(min_v, max_v,nv+1);
-    disp(arry_v)
+    % disp(arry_v)
     ht = arry_v(2) - arry_v(1);
     str = [];
     for ii = 1:nv
