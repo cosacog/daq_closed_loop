@@ -57,7 +57,7 @@ idx_freqs_ring_buf = find(freqs_ring_buf >= range_freqs(1) & freqs_ring_buf <= r
 freqs_ring_buf_range = freqs_ring_buf(idx_freqs_ring_buf); % frequencies for power range to plot
 idx_freq_oi = find(freqs_ring_buf>=freq_oi, 1); % idx of power to be saved
 xlim_freqs = [freqs_ring_buf_range(1), freqs_ring_buf_range(end)]; % xlim
-pows_eeg = []; len_pows = 0; % power data of time sequence
+pows_eeg_rest = []; len_pows = 0; % power data of time sequence
 len_pow_view = 10; % points to view
 title_pow_ts = sprintf('Power of %d Hz',freq_oi);
 % ==================== coefficences to convert into real data ============================
@@ -140,12 +140,12 @@ s.startBackground();
         if ai0time(end) > t_force_quit
             s.stop();s.release();delete(lh);
             disp('quit')
-            usrdata.pows_eeg_rest = pows_eeg;
+            usrdata.pows_eeg_rest = pows_eeg_rest;
             set(plotHandle,'UserData',usrdata);
             % ph = figure(plotHandle+1)
-            % plot(pows_eeg)
+            % plot(pows_eeg_rest)
             % subplot(2,3,5)
-            % set(ah_pts, 'XData',[1:length(pows_eeg)],'YData', pows_eeg)
+            % set(ah_pts, 'XData',[1:length(pows_eeg_rest)],'YData', pows_eeg_rest)
             % xlim([1,200])
             % set(axe_pts, 'XLim',[1, 200])
         end
@@ -177,12 +177,12 @@ s.startBackground();
         % plot time sequence of power of interest
         pow_eeg_freq_oi = pow_eeg(idx_freq_oi);
 
-        pows_eeg = [pows_eeg, pow_eeg_freq_oi];
+        pows_eeg_rest = [pows_eeg_rest, pow_eeg_freq_oi];
         len_pows = len_pows+1;
         xlim_pow_ts = [len_pows - len_pow_view, len_pows];
         subplot(2,3,5)
-        set(ah_pts, 'XData',[1:length(pows_eeg)],'YData', pows_eeg)
-        % plot(pows_eeg);
+        set(ah_pts, 'XData',[1:length(pows_eeg_rest)],'YData', pows_eeg_rest)
+        % plot(pows_eeg_rest);
         xlim(xlim_pow_ts);
         % ylim(pow_view_range)
         % title(title_pow_ts);
@@ -190,9 +190,9 @@ s.startBackground();
         % plot histogram of power of interest
         subplot(2,3,6)
         if rem(len_pows,50) == 40
-            histogram(pows_eeg(30:end), 10);
+            histogram(pows_eeg_rest(30:end), 10);
             title('histogram of power')
-            usrdata.pows_eeg = pows_eeg;
+            usrdata.pows_eeg_rest = pows_eeg_rest;
             set(plotHandle,'UserData', usrdata);
         end
     end % refillBuffers
