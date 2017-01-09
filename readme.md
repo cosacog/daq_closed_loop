@@ -1,4 +1,7 @@
 # daq_closed_loop
+matlab data acquisition toolboxも用いたサンプルです。
+よくわかってませんがMITライセンスということにしてます。
+
 ## 処理の流れ
 ### 1. pre1_record_calibration.m
 record calibration signals
