@@ -140,6 +140,12 @@ al_hi = line([0,12], [thr_pow(2),thr_pow(2)], 'col','red');
 set(axe_pow, 'XLim',[0.5, 10.5], 'XLimMode','manual');
 set(axe_pow, 'YLim',ylim_pow, 'YLimMode','manual')
 len_pow_plot = 10; % points to plot
+
+% power histogram
+subplot(4,2,8);
+axe_powh = gca;
+ax_powh = hist(nan);
+title('EEG power histogram')
 % ==========  Apply the settings to the hardware ================
 s.Rate = s_rate;
 s.IsContinuous = 1;
@@ -250,6 +256,12 @@ s.startBackground();
             set(ax_amp(2), 'XData',idx_amp_lo_x,'YData',mep_amp_lo_y); % low
             set(axe_amp, 'XLim',[0, idx_epochs+1])
 
+            % plot histogram of power
+            subplot(4,2,8);
+            % set(ax_powh, 'Data', pow_ts)
+            histogram(pow_ts);
+            title('EEG power histogram')
+
             isDataMepLogged = false;
             % stop after get enough data
             if idx_epochs >= n_epochs_to_save
@@ -279,19 +291,19 @@ s.startBackground();
 
         % Actions for when the trigger condition is met
         if isMyDataLogged
-            % ============== put out TMS pulse =======================
-%             io32(ioObj, address, data_out)% trigger on
-%             pause(0.01)
-%             io32(ioObj, address, data_out0) % trigger off
+            %============== put out TMS pulse =======================
+            % io32(ioObj, address, data_out)% trigger on
+            % pause(0.01)
+            % io32(ioObj, address, data_out0) % trigger off
             % ============== end of TMS pulse ========================
 
             % plot epoch data
             figure(plotHandle)
             subplot(4,2,[3 4]);
-            set(al_epo,'XData', bufferRingTime, 'YData', bufferRingMonitorDetrend);
-            % plot(bufferRingTime, bufferRingMonitorDetrend);
-            
+            set(al_epo,'XData', bufferRingTime, 'YData', bufferRingMonitorDetrend);       
             title([num2str(idx_epochs),' epoch'])
+
+
             
             % data store in plotHandle.UserData (=usrdata)
             usrdata.savedata(idx_epochs).time = ai0time;
